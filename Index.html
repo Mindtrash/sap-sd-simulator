@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SAP SD Simulator VERSION3</title>
+<style>
+:root{
+  --bg:#050b16;--bg2:#0c1a30;--card:#102139;--card2:#162943;--text:#eef7ff;--muted:#9fb5cf;
+  --accent:#3bdcff;--accent2:#8b68ff;--line:rgba(255,255,255,.13);
+  --good:#37e992;--bad:#ff657a;--warn:#ffd166;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:
+    radial-gradient(circle at 12% 0%,rgba(59,220,255,.20),transparent 30%),
+    radial-gradient(circle at 90% 10%,rgba(139,104,255,.22),transparent 30%),
+    radial-gradient(circle at 55% 105%,rgba(55,233,146,.10),transparent 30%),
+    linear-gradient(135deg,var(--bg),var(--bg2));
+}
+header,main{max-width:1240px;margin:auto;padding:24px}
+h1{font-size:clamp(34px,5vw,64px);margin:0 0 8px;letter-spacing:-.06em}
+h2{margin:8px 0 12px} p{line-height:1.5}
+.subtitle,.small{color:var(--muted)} .small{font-size:13px}
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));border:1px solid var(--line);border-radius:28px;padding:22px;box-shadow:0 25px 90px rgba(0,0,0,.35);backdrop-filter:blur(12px)}
+.screen{display:none}.screen.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.grid{grid-template-columns:1fr}}
+.card,.mode{background:rgba(16,33,57,.88);border:1px solid var(--line);border-radius:22px;padding:18px;cursor:pointer;transition:.18s}
+.card:hover,.mode:hover{transform:translateY(-2px);border-color:rgba(59,220,255,.55);background:rgba(59,220,255,.08)}
+.mode.active{border-color:rgba(59,220,255,.75);background:rgba(59,220,255,.13)}
+.badge{display:inline-block;font-size:12px;padding:5px 9px;border-radius:999px;background:rgba(59,220,255,.13);border:1px solid rgba(59,220,255,.30);margin-bottom:10px}
+.row{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.progress{height:12px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;flex:1;min-width:210px}
+.progress>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:.25s}
+.scenario{padding:15px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.055);margin:16px 0;color:#dcecff}
+.question{font-size:23px;line-height:1.35;margin:16px 0}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px}
+.tag{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.05);font-size:12px;color:#d8ecff}
+.answers{display:grid;gap:10px;margin-top:16px}
+.answer{display:flex;gap:12px;padding:14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.045);cursor:pointer;line-height:1.38}
+.answer:hover{border-color:rgba(59,220,255,.48);background:rgba(59,220,255,.07)}
+.answer input{margin-top:4px;accent-color:var(--accent)}
+button{border:0;padding:12px 16px;border-radius:14px;cursor:pointer;font-weight:850;background:linear-gradient(90deg,var(--accent),#8ff2ff);color:#06101f}
+button.secondary{background:rgba(255,255,255,.08);color:var(--text);border:1px solid var(--line)}
+button.danger{background:rgba(255,101,122,.14);color:#ffe3e8;border:1px solid rgba(255,101,122,.36)}
+.controls{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:18px}
+.review{margin:12px 0;padding:15px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.045)}
+.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+.score{font-size:82px;font-weight:950;letter-spacing:-.08em;line-height:1}
+table{width:100%;border-collapse:collapse;margin-top:10px} th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top} th{color:#dbeeff}
+select{background:#0d1b2e;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px}
+.barwrap{height:10px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;min-width:110px}
+.barfill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}
+@media(max-width:800px){.modes{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+<h1>SAP SD Simulator VERSION3</h1>
+<p class="subtitle">Adaptive SAP SD certification training engine for C_TS462_2601-style practice. It generates dynamic scenarios, tracks weak areas, stores local progress, and produces a final summary page after each attempt.</p>
+</header>
+
+<main>
+<section id="home" class="screen active">
+<div class="panel">
+  <h2>Training Mode</h2>
+  <div class="modes">
+    <div id="modeStandard" class="mode active" onclick="setMode('standard')"><b>Standard Exam</b><p class="small">Balanced exam-like practice across SAP SD domains.</p></div>
+    <div id="modeAdaptive" class="mode" onclick="setMode('adaptive')"><b>Adaptive Weakness Mode</b><p class="small">Uses your local history to target weak domains more often.</p></div>
+    <div id="modeBoss" class="mode" onclick="setMode('boss')"><b>Boss Fight</b><p class="small">Concentrated domain pressure. Great for painful mastery.</p></div>
+  </div>
+
+  <div class="row">
+    <div>
+      <h2>Choose Difficulty</h2>
+      <p class="small">VERSION3 is dynamic. It generates scenarios from templates, variables, and SAP-style distractors.</p>
+    </div>
+    <label class="small">Questions
+      <select id="questionCount"><option>25</option><option>40</option><option>60</option></select>
+    </label>
+    <label class="small">Boss Domain
+      <select id="bossDomain">
+        <option>Pricing</option><option>Shipping</option><option>Copy Control</option><option>Billing</option><option>Output/Text</option><option>Architecture</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="grid">
+    <div class="card" onclick="startExam('easy')"><span class="badge">LEVEL 1</span><h3>Easy</h3><p class="small">Core concepts and object recognition.</p></div>
+    <div class="card" onclick="startExam('medium')"><span class="badge">LEVEL 2</span><h3>Medium</h3><p class="small">Determinations, configuration, standard process behavior.</p></div>
+    <div class="card" onclick="startExam('advanced')"><span class="badge">LEVEL 3</span><h3>Advanced</h3><p class="small">Troubleshooting, splits, integration and configuration traps.</p></div>
+    <div class="card" onclick="startExam('expert')"><span class="badge">LEVEL 4</span><h3>Expert</h3><p class="small">Hybrid scenarios, clean core, architecture and least-wrong answers.</p></div>
+  </div>
+
+  <hr style="border-color:rgba(255,255,255,.1);margin:22px 0">
+  <h2>Local Progress Snapshot</h2>
+  <div id="historyBox" class="small"></div>
+</div>
+</section>
+
+<section id="quiz" class="screen">
+<div class="panel">
+  <div class="row">
+    <div><b id="levelLabel"></b><br><span class="small" id="meta"></span></div>
+    <div class="progress"><div id="bar"></div></div>
+    <div id="timer" class="small">0:00</div>
+    <button class="danger" onclick="exitExam()">Exit</button>
+  </div>
+  <div id="scenario" class="scenario"></div>
+  <div id="question" class="question"></div>
+  <div id="tags" class="tags"></div>
+  <div id="answers" class="answers"></div>
+  <div id="feedback"></div>
+  <div class="controls">
+    <button class="secondary" onclick="previousQuestion()">Previous</button>
+    <div style="display:flex;gap:10px">
+      <button class="secondary" onclick="toggleMark()">Mark for Review</button><button class="secondary" onclick="verifyAnswer()">Verify</button>
+      <button onclick="nextQuestion()" id="nextBtn">Next</button>
+    </div>
+  </div>
+</div>
+</section>
+
+<section id="results" class="screen">
+<div class="panel">
+  <div style="text-align:center">
+    <div id="score" class="score"></div>
+    <h2 id="verdict"></h2>
+    <p id="summary" class="small"></p>
+    <button onclick="restartSame()">Retry Same Setup</button>
+    <button class="secondary" onclick="goHome()">Back to Home</button>
+  </div>
+
+  <hr style="border-color:rgba(255,255,255,.1);margin:24px 0">
+
+  <h2>Summary Page</h2>
+  <table id="summaryTable"></table>
+
+  <h2>Weak Areas</h2>
+  <table id="weakness"></table>
+
+  <h2>Recommended Next Drill</h2>
+  <div id="recommendation" class="review"></div>
+
+  <h2>Question Review</h2>
+  <div id="review"></div>
+</div>
+</section>
+</main>
+
+<script>
+const LEVEL_NAMES={easy:"Easy",medium:"Medium",advanced:"Advanced",expert:"Expert"};
+let trainingMode="standard";
+let lastSetup={level:"medium",count:25,mode:"standard",boss:"Pricing"};
+
+function setMode(m){
+  trainingMode=m;
+  ["Standard","Adaptive","Boss"].forEach(x=>document.getElementById("mode"+x).classList.remove("active"));
+  document.getElementById("mode"+(m==="standard"?"Standard":m==="adaptive"?"Adaptive":"Boss")).classList.add("active");
+}
+
+function rand(arr){return arr[Math.floor(Math.random()*arr.length)]}
+function shuffle(arr){return [...arr].sort(()=>Math.random()-0.5)}
+function choice(arr,n){return shuffle(arr).slice(0,n)}
+
+const data={
+ plants:["1000","1100","1200","1710","2510"],
+ shippingConditions:["Standard","Express","Cold Chain","Export Container","Customer Pickup"],
+ loadingGroups:["Manual","Pallet","Crane","Forklift","Refrigerated"],
+ routes:["Domestic Standard","International Air","Express Road","Cold Chain Route","Export Ocean"],
+ docs:["OR standard order","RE returns order","CR credit memo request","QT quotation","CF consignment fill-up"],
+ materials:["TG11","FG-100","MAT-500","SPARE-900","BOM-KIT-01"],
+ customers:["A1000","CUST-200","MedSupply Retail","Hospital Network","Distributor North"],
+ outputs:["Invoice PDF","Delivery Note","Order Confirmation","Credit Memo Output"],
+ systems:["QA","Production","sandbox","test tenant"],
+ countries:["Chile","Argentina","Peru","Uruguay","Germany"]
+};
+
+const concepts=[
+{
+domain:"Sales Documents",levels:["easy","medium"],kind:"concept",
+make(){return q("single","Sales Documents",
+`A consultant is explaining the structure of a standard SAP sales document to a new key user.`,
+"What is the correct standard structure of a sales document?",
+["Header, item, and schedule line","Header, delivery, and billing document","Client, company code, and plant","Shipping point, route, and warehouse number"],
+["Header, item, and schedule line"],
+"A sales document is structured as header, item, and schedule line. Schedule lines hold delivery dates and quantities.");}
+},
+{
+domain:"Organizational Structure",levels:["easy","medium"],kind:"concept",
+make(){return q("multiple","Organizational Structure",
+`A project team is defining the sales area structure for a new SAP S/4HANA Sales implementation.`,
+"Which organizational elements form a sales area? Choose three.",
+["Sales organization","Distribution channel","Division","Shipping point","Storage location","Warehouse number"],
+["Sales organization","Distribution channel","Division"],
+"Sales area is the combination of sales organization, distribution channel, and division.",3);}
+},
+{
+domain:"Business Partner",levels:["easy","medium"],kind:"concept",
+make(){return q("single","Business Partner",
+`A customer is created in SAP S/4HANA using the Business Partner approach.`,
+"Which statement is correct?",
+["A Business Partner can have multiple roles","A Business Partner can have only one role","The BP category can always be changed later","Business Partner eliminates the need for sales area data"],
+["A Business Partner can have multiple roles"],
+"A BP can carry multiple roles such as sold-to and ship-to. BP category is selected during creation and cannot be freely changed later.");}
+},
+{
+domain:"Pricing",levels:["medium","advanced","expert"],kind:"determination",
+make(){return q("multiple","Pricing",
+`A sales order for customer ${rand(data.customers)} and material ${rand(data.materials)} cannot determine the expected pricing procedure.`,
+"Which elements are used in standard pricing procedure determination? Choose three.",
+["Sales area","Customer pricing procedure","Document pricing procedure","Shipping point","Warehouse number","Schedule line category"],
+["Sales area","Customer pricing procedure","Document pricing procedure"],
+"Pricing procedure determination uses sales area, document pricing procedure, and customer pricing procedure.",3);}
+},
+{
+domain:"Pricing",levels:["medium","advanced","expert"],kind:"troubleshooting",
+make(){return q("multiple","Pricing",
+`Pricing is missing for material ${rand(data.materials)} even though a condition record exists and the user insists the customer is correct.`,
+"What should you check first? Choose three.",
+["Condition record validity period","Access sequence and key combination","Determined pricing procedure","Loading group","Warehouse process type","Output channel"],
+["Condition record validity period","Access sequence and key combination","Determined pricing procedure"],
+"Missing pricing is commonly caused by validity, access/key mismatch, or wrong pricing procedure determination.",3);}
+},
+{
+domain:"Pricing",levels:["advanced","expert"],kind:"trap",
+make(){return q("single","Pricing",
+`A freight amount is entered once at header level and should be distributed among order items based on net value.`,
+"Which configuration concept best supports this behavior?",
+["Header condition","Schedule line category","Delivery item category","Partner determination procedure"],
+["Header condition"],
+"Header conditions are entered at header level and can be distributed among items using the configured basis.");}
+},
+{
+domain:"Shipping",levels:["medium","advanced","expert"],kind:"determination",
+make(){return q("multiple","Shipping",
+`During order entry for plant ${rand(data.plants)}, SAP proposes an unexpected shipping point for ${rand(data.shippingConditions)} shipping.`,
+"Which elements are used in standard shipping point determination? Choose three.",
+["Delivering plant","Shipping condition","Loading group","Route","Payer","Billing type"],
+["Delivering plant","Shipping condition","Loading group"],
+"Shipping point is determined from delivering plant, shipping condition, and loading group.",3);}
+},
+{
+domain:"Shipping",levels:["medium","advanced"],kind:"determination",
+make(){return q("multiple","Shipping",
+`SAP must automatically determine the delivering plant for material ${rand(data.materials)} in a sales order.`,
+"Which sources are used in standard delivering plant determination? Choose three.",
+["Customer-material information record","Ship-to party master record","Material master record","Sold-to party pricing procedure","Billing type"],
+["Customer-material information record","Ship-to party master record","Material master record"],
+"The standard sequence is customer-material info record, ship-to party, and material master.",3);}
+},
+{
+domain:"Shipping",levels:["advanced","expert"],kind:"troubleshooting",
+make(){return q("multiple","Shipping",
+`A sales order was expected to create one outbound delivery, but SAP created multiple deliveries.`,
+"Which differences commonly cause delivery split? Choose three.",
+["Shipping point","Route","Ship-to party","Same company code","Same material group"],
+["Shipping point","Route","Ship-to party"],
+"Different shipping point, route, or ship-to party can prevent delivery combination.",3);}
+},
+{
+domain:"Billing",levels:["medium","advanced","expert"],kind:"troubleshooting",
+make(){return q("multiple","Billing",
+`Two outbound deliveries were selected together in billing creation, but SAP generated two invoices.`,
+"Which differences commonly trigger billing split? Choose two.",
+["Different payer","Different billing date","Same company code","Same sales organization","Same plant"],
+["Different payer","Different billing date"],
+"Billing split is triggered by header-relevant differences such as payer or billing date.",2);}
+},
+{
+domain:"Billing",levels:["advanced","expert"],kind:"troubleshooting",
+make(){return q("single","Billing",
+`A billing document is created, but no accounting document is generated because the revenue account cannot be determined.`,
+"What should be checked first?",
+["Revenue account determination","Shipping point determination","Text access sequence","Storage bin sorting"],
+["Revenue account determination"],
+"Revenue account determination controls the G/L account derivation for billing postings.");}
+},
+{
+domain:"Copy Control",levels:["medium","advanced","expert"],kind:"configuration",
+make(){return q("single","Copy Control",
+`A ${rand(["quotation","contract","billing document"])} cannot be used as a reference when creating a subsequent document.`,
+"What should be checked first?",
+["Copy control source-target relationship","Warehouse number assignment","Output channel determination","Storage bin master data"],
+["Copy control source-target relationship"],
+"Copy control defines which source documents can be copied to which target documents and under which conditions.");}
+},
+{
+domain:"Copy Control",levels:["advanced","expert"],kind:"trap",
+make(){return q("single","Copy Control",
+`A quotation item was manually changed to a free-of-charge item category. When copied to the sales order, SAP redetermines an unexpected item category.`,
+"Which copy control setting is most relevant?",
+["Default item category","Loading group","Billing date","Storage section"],
+["Default item category"],
+"The default item category in copy control can preserve correct item category behavior when reference items were manually selected.");}
+},
+{
+domain:"Copy Control",levels:["medium","advanced"],kind:"concept",
+make(){return q("multiple","Copy Control",
+`A consultant reviews copy control for sales documents.`,
+"At which levels can copy control be maintained for sales documents? Choose three.",
+["Header","Item","Schedule line","Storage bin","Activity area"],
+["Header","Item","Schedule line"],
+"Sales document copy control can be maintained at header, item, and schedule line level.",3);}
+},
+{
+domain:"Output/Text",levels:["medium","advanced","expert"],kind:"configuration",
+make(){return q("multiple","Output/Text",
+`A company uses billing output in SAP S/4HANA for ${rand(data.outputs)}.`,
+"Which technologies can be relevant for billing output depending on the scenario? Choose two.",
+["BRF+","NAST","MRP Live","Warehouse order","Route schedule"],
+["BRF+","NAST"],
+"SAP S/4HANA can use BRF+-based output management, while NAST may still exist in compatible or legacy scenarios.",2);}
+},
+{
+domain:"Output/Text",levels:["medium","advanced"],kind:"configuration",
+make(){return q("single","Output/Text",
+`A legal text should be determined automatically from master data into a sales document.`,
+"Which mechanism is used by SAP to find texts automatically?",
+["Text determination access sequence","Pricing subtotal","Warehouse order","Billing split routine"],
+["Text determination access sequence"],
+"Text determination uses text types, text determination procedures, and access sequences.");}
+},
+{
+domain:"Output/Text",levels:["advanced","expert"],kind:"trap",
+make(){return q("single","Output/Text",
+`A legal text should apply to future documents but must not change historical documents that were already issued.`,
+"Which design is most appropriate?",
+["Copy the text into the document as a snapshot","Always reference the source text dynamically","Store the text only in the print form","Avoid text determination completely"],
+["Copy the text into the document as a snapshot"],
+"Copied text preserves historical consistency. Referenced text can change if the source changes.");}
+},
+{
+domain:"EWM/Logistics",levels:["medium","advanced","expert"],kind:"concept",
+make(){return q("single","EWM/Logistics",
+`An outbound delivery is replicated to embedded EWM for picking.`,
+"Which EWM document is used as the basis for warehouse task processing?",
+["Outbound delivery order","Billing document request","Accounting document","Condition contract"],
+["Outbound delivery order"],
+"In EWM, the outbound delivery order is used as the basis for warehouse tasks and warehouse orders.");}
+},
+{
+domain:"EWM/Logistics",levels:["medium","advanced"],kind:"concept",
+make(){return q("multiple","EWM/Logistics",
+`The warehouse posts goods issue for an outbound delivery.`,
+"What are typical effects of posting goods issue? Choose three.",
+["Inventory is reduced","Delivery status is updated","The delivery becomes relevant for billing","The sales document type is changed","Pricing procedure is deleted"],
+["Inventory is reduced","Delivery status is updated","The delivery becomes relevant for billing"],
+"PGI reduces stock, updates delivery status, and usually moves the delivery into the billing due process.",3);}
+},
+{
+domain:"Architecture",levels:["advanced","expert"],kind:"architecture",
+make(){return q("single","Architecture",
+`The business requests heavy custom logic inside standard SAP SD pricing behavior.`,
+"Which approach best aligns with clean core principles?",
+["Use configuration, released extensibility, or side-by-side extensions before modifying standard","Modify standard SAP includes directly","Hard-code country-specific logic in standard routines without documentation","Disable standard pricing and replace it with manual entry"],
+["Use configuration, released extensibility, or side-by-side extensions before modifying standard"],
+"Clean core favors standard configuration and released extensibility before direct modification of SAP standard objects.");}
+},
+{
+domain:"Architecture",levels:["expert"],kind:"architecture",
+make(){return q("multiple","Architecture",
+`Only for a newly created shipping point, the automatic PGI job does not process deliveries. Manual PGI works.`,
+"What would you investigate first? Choose three.",
+["Job variant and selection criteria","Shipping point used in the delivery","Delivery and job logs","Condition exclusion","BP category"],
+["Job variant and selection criteria","Shipping point used in the delivery","Delivery and job logs"],
+"If manual processing works but the job fails, first check job selection criteria, relevant shipping point, statuses, and logs.",3);}
+},
+{
+domain:"Intercompany",levels:["advanced","expert"],kind:"concept",
+make(){return q("single","Intercompany",
+`The sales organization belongs to one company code, but the delivering plant belongs to another company code.`,
+"Which scenario does this describe?",
+["Cross-company or intercompany sales","Cash sales","Free goods only","Pure text item processing"],
+["Cross-company or intercompany sales"],
+"When the delivering plant belongs to a different company code than the sales organization, the scenario is cross-company/intercompany sales.");}
+}
+];
+
+function q(type,domain,scenario,question,answers,correct,explanation,choose=1){
+  return {type,domain,scenario,question,answers:shuffle(answers),correct,explanation,choose};
+}
+
+let state={level:null,questions:[],index:0,answers:{},marked:{},locked:{},start:0,mode:"standard",boss:"Pricing",count:25};
+
+function history(){return JSON.parse(localStorage.getItem("sapSdV3History")||"[]")}
+function saveHistory(entry){const h=history();h.push(entry);localStorage.setItem("sapSdV3History",JSON.stringify(h.slice(-50)))}
+
+function renderHistory(){
+  const h=history();
+  if(!h.length){document.getElementById("historyBox").innerHTML="No local attempts stored yet.";return}
+  const last=h[h.length-1];
+  const avg=Math.round(h.reduce((s,x)=>s+x.score,0)/h.length);
+  const weak=aggregateHistoryWeakness().slice(0,3).map(x=>x[0]).join(", ")||"None";
+  document.getElementById("historyBox").innerHTML=`Stored attempts: <b>${h.length}</b> · Average score: <b>${avg}%</b> · Last score: <b>${last.score}%</b> · Current weak domains: <b>${weak}</b>`;
+}
+
+function aggregateHistoryWeakness(){
+  const data={};
+  history().forEach(at=>{
+    Object.entries(at.domains||{}).forEach(([d,r])=>{
+      data[d]=data[d]||{c:0,t:0};
+      data[d].c+=r.correct; data[d].t+=r.total;
+    });
+  });
+  return Object.entries(data).filter(([_,r])=>r.t>0).sort((a,b)=>(a[1].c/a[1].t)-(b[1].c/b[1].t));
+}
+
+function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById(id).classList.add("active");scrollTo(0,0)}
+
+function startExam(level){
+  const count=parseInt(document.getElementById("questionCount").value,10)||25;
+  const boss=document.getElementById("bossDomain").value;
+  lastSetup={level,count,mode:trainingMode,boss};
+  state={level,count,mode:trainingMode,boss,questions:buildQuestions(level,count,trainingMode,boss),index:0,answers:{},marked:{},locked:{},start:Date.now()};
+  document.getElementById("levelLabel").textContent=`${LEVEL_NAMES[level]} · ${trainingMode==="standard"?"Standard Exam":trainingMode==="adaptive"?"Adaptive Weakness Mode":"Boss Fight: "+boss}`;
+  show("quiz");
+  renderQuestion();
+  if(window.timerInt)clearInterval(window.timerInt);
+  window.timerInt=setInterval(()=>{const s=Math.floor((Date.now()-state.start)/1000);document.getElementById("timer").textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`},1000);
+}
+
+function buildQuestions(level,count,mode,boss){
+  let pool=concepts.filter(c=>c.levels.includes(level));
+  if(mode==="boss") pool=pool.filter(c=>c.domain===boss || (boss==="Output/Text"&&c.domain==="Output/Text"));
+  if(!pool.length) pool=concepts.filter(c=>c.levels.includes(level));
+  let weighted=[];
+  const weak=aggregateHistoryWeakness().slice(0,4).map(x=>x[0]);
+  pool.forEach(c=>{
+    let w=1;
+    if(mode==="adaptive" && weak.includes(c.domain)) w=5;
+    if(mode==="boss") w=6;
+    if(level==="expert" && ["trap","architecture","troubleshooting"].includes(c.kind)) w+=2;
+    for(let i=0;i<w;i++)weighted.push(c);
+  });
+  const qs=[];
+  for(let i=0;i<count;i++){
+    const template=rand(weighted);
+    const question=template.make();
+    question.id=i+1;
+    question.templateKind=template.kind;
+    qs.push(question);
+  }
+  return qs;
+}
+
+function renderQuestion(){
+  const qu=state.questions[state.index];
+  document.getElementById("meta").textContent=`Question ${state.index+1} of ${state.questions.length}`;
+  document.getElementById("bar").style.width=`${((state.index+1)/state.questions.length)*100}%`;
+  document.getElementById("scenario").textContent=qu.scenario;
+  document.getElementById("question").textContent=qu.question;
+  document.getElementById("tags").innerHTML=`<span class="tag">${qu.domain}</span><span class="tag">${qu.type==="multiple"?"Multiple Response · Choose "+qu.choose:"Single Response"}</span><span class="tag">${qu.templateKind}</span>${state.marked[qu.id]?'<span class="tag warn">Marked</span>':''}`;
+  const box=document.getElementById("answers");box.innerHTML="";
+  qu.answers.forEach(ans=>{
+    const selected=(state.answers[qu.id]||[]).includes(ans);
+    const input=qu.type==="multiple"?"checkbox":"radio";
+    const el=document.createElement("label");
+    el.className="answer";
+    el.innerHTML=`<input type="${input}" ${selected?"checked":""}><span>${ans}</span>`;
+    el.onclick=e=>{e.preventDefault();selectAnswer(ans)};
+    box.appendChild(el);
+  });
+  document.getElementById("nextBtn").textContent=state.index===state.questions.length-1?"Finish":"Next";
+  renderFeedback();
+}
+
+function selectAnswer(ans){
+  const qu=state.questions[state.index];
+
+  if(state.locked[qu.id]) return;
+
+  let cur=state.answers[qu.id]||[];
+
+  if(qu.type==="single"){
+    cur=[ans];
+  }else{
+    cur=cur.includes(ans)?cur.filter(x=>x!==ans):[...cur,ans];
+    if(cur.length>qu.choose) cur.shift();
+  }
+
+  state.answers[qu.id]=cur;
+  renderQuestion();
+}
+function isCorrect(qu){return JSON.stringify([...(state.answers[qu.id]||[])].sort())===JSON.stringify([...qu.correct].sort())}
+function renderFeedback(){
+  const qu=state.questions[state.index];
+  const div=document.getElementById("feedback");
+  const current = state.answers[qu.id] || [];
+
+  if(!current.length){
+    div.innerHTML="";
+    return;
+  }
+
+  if(state.locked[qu.id]){
+    const ok=isCorrect(qu);
+
+    div.innerHTML=`<div class="review">
+      <div class="${ok?'good':'bad'}"><b>${ok?'Correct':'Incorrect'}</b></div>
+      <p class="small"><b>Correct answer:</b> ${qu.correct.join(" / ")}</p>
+      <p class="small">${qu.explanation}</p>
+      <p class="small warn"><b>Answer locked.</b> Changes are no longer allowed.</p>
+    </div>`;
+
+    return;
+  }
+
+  if(qu.type==="multiple" && current.length < qu.choose){
+    div.innerHTML=`<div class="review">
+      <div class="warn"><b>Selection in progress</b></div>
+      <p class="small">Choose ${qu.choose} answers before verification.</p>
+    </div>`;
+    return;
+  }
+
+  div.innerHTML=`<div class="review">
+    <div class="warn"><b>Ready for verification</b></div>
+    <p class="small">Press Verify to lock and validate your answer.</p>
+  </div>`;
+}
+
+function verifyAnswer(){
+
+  const qu = state.questions[state.index];
+  const current = state.answers[qu.id] || [];
+
+  if(!current.length){
+    alert("Select at least one answer before verification.");
+    return;
+  }
+
+  if(qu.type==="multiple" && current.length < qu.choose){
+    alert(`This question requires ${qu.choose} answers.`);
+    return;
+  }
+
+  state.locked[qu.id] = true;
+  renderQuestion();
+}
+
+function nextQuestion(){state.index<state.questions.length-1?(state.index++,renderQuestion()):finishExam()}
+function previousQuestion(){if(state.index>0){state.index--;renderQuestion()}}
+function toggleMark(){const qu=state.questions[state.index];state.marked[qu.id]=!state.marked[qu.id];renderQuestion()}
+function exitExam(){if(confirm("Exit current attempt?")){clearInterval(window.timerInt);show("home");renderHistory()}}
+
+function finishExam(){
+  clearInterval(window.timerInt);
+  const correct=state.questions.filter(isCorrect).length,total=state.questions.length,pct=Math.round(correct*100/total);
+  const elapsed=Math.floor((Date.now()-state.start)/1000);
+  const domains=domainStats();
+  saveHistory({date:new Date().toISOString(),score:pct,level:state.level,mode:state.mode,boss:state.boss,domains});
+  show("results");
+  const score=document.getElementById("score");score.textContent=pct+"%";score.className="score "+(pct>=82?"good":pct>=70?"warn":"bad");
+  document.getElementById("verdict").textContent=pct>=82?"SAP-style pass achieved. Boss level reached.":pct>=70?"Close. Keep drilling weak domains.":"Not ready yet, but now the gaps are visible.";
+  document.getElementById("summary").textContent=`${correct}/${total} correct · Time ${Math.floor(elapsed/60)}:${String(elapsed%60).padStart(2,"0")} · ${LEVEL_NAMES[state.level]} · ${state.mode}`;
+  buildSummaryTable(pct,correct,total,elapsed,domains);
+  buildWeakness(domains);
+  buildRecommendation(domains);
+  buildReview();
+}
+
+function domainStats(){
+  const d={};
+  state.questions.forEach(qu=>{
+    d[qu.domain]=d[qu.domain]||{correct:0,total:0};
+    d[qu.domain].total++;
+    if(isCorrect(qu))d[qu.domain].correct++;
+  });
+  return d;
+}
+function buildSummaryTable(pct,correct,total,elapsed,domains){
+  const weakest=Object.entries(domains).sort((a,b)=>(a[1].correct/a[1].total)-(b[1].correct/b[1].total))[0]?.[0]||"None";
+  document.getElementById("summaryTable").innerHTML=`
+  <tr><th>Metric</th><th>Value</th></tr>
+  <tr><td>Score</td><td>${pct}%</td></tr>
+  <tr><td>Correct answers</td><td>${correct}/${total}</td></tr>
+  <tr><td>Difficulty</td><td>${LEVEL_NAMES[state.level]}</td></tr>
+  <tr><td>Training mode</td><td>${state.mode}</td></tr>
+  <tr><td>Time</td><td>${Math.floor(elapsed/60)}:${String(elapsed%60).padStart(2,"0")}</td></tr>
+  <tr><td>Weakest domain this attempt</td><td>${weakest}</td></tr>`;
+}
+function buildWeakness(domains){
+  const rows=Object.entries(domains).sort((a,b)=>(a[1].correct/a[1].total)-(b[1].correct/b[1].total));
+  document.getElementById("weakness").innerHTML="<tr><th>Domain</th><th>Result</th><th>Status</th><th>Visual</th></tr>"+rows.map(([d,r])=>{
+    const p=Math.round(r.correct*100/r.total),cls=p>=80?"good":p>=60?"warn":"bad",status=p>=80?"Strong":p>=60?"Needs reinforcement":"Weak";
+    return `<tr><td>${d}</td><td>${r.correct}/${r.total} (${p}%)</td><td class="${cls}"><b>${status}</b></td><td><div class="barwrap"><div class="barfill" style="width:${p}%"></div></div></td></tr>`;
+  }).join("");
+}
+function buildRecommendation(domains){
+  const weak=Object.entries(domains).sort((a,b)=>(a[1].correct/a[1].total)-(b[1].correct/b[1].total))[0];
+  if(!weak){document.getElementById("recommendation").innerHTML="No recommendation available.";return}
+  const d=weak[0],p=Math.round(weak[1].correct*100/weak[1].total);
+  document.getElementById("recommendation").innerHTML=`<b>Next recommended drill:</b> Boss Fight · ${d}<br><span class="small">This attempt scored ${p}% in ${d}. Run a concentrated drill until this domain is at least 80% twice in a row.</span>`;
+}
+function buildReview(){
+  const box=document.getElementById("review");box.innerHTML="";
+  state.questions.forEach((qu,i)=>{
+    const chosen=(state.answers[qu.id]||[]).join(" / ")||"Not answered";
+    const div=document.createElement("div");div.className="review";
+    div.innerHTML=`<div><b>${i+1}. ${qu.domain}</b> ${state.marked[qu.id]?'<span class="tag">Marked</span>':''}</div><div class="${isCorrect(qu)?'good':'bad'}"><b>${isCorrect(qu)?'Correct':'Incorrect'}</b></div><p>${qu.scenario}</p><p><b>${qu.question}</b></p><p class="small"><b>Your answer:</b> ${chosen}</p><p class="small"><b>Correct answer:</b> ${qu.correct.join(" / ")}</p><p class="small">${qu.explanation}</p>`;
+    box.appendChild(div);
+  });
+}
+function restartSame(){trainingMode=lastSetup.mode;document.getElementById("questionCount").value=lastSetup.count;document.getElementById("bossDomain").value=lastSetup.boss;startExam(lastSetup.level)}
+function goHome(){show("home");renderHistory()}
+renderHistory();
+</script>
+</body>
+</html>
